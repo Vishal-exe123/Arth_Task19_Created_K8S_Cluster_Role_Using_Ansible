@@ -1,0 +1,8 @@
+---
+# handlers file for K8SMater
+- name: Restarting Docker Service
+  service:
+          name:  "{{ service_name }}"
+          state:  restarted
+          enabled:  yes
+

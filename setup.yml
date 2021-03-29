@@ -1,0 +1,6 @@
+- hosts:  tag_Name_SlaveNodes
+  roles:
+          - K8SMater
+- hosts:  tag_Name_SlaveNodes
+  roles:
+          - K8SWorkers

@@ -1,0 +1,11 @@
+---
+# vars file for K8SWorkers
+packages:
+        - kubelet
+        - kubeadm
+        - kubectl
+
+tokens:  "kubeadm join {{groups['tag_Name_MasterNode']}}:6443 --token xam45h.b093fpuuwj2j     --discovery-token-ca-cert-hash sha256:047ca54652d0383bad4616caed746458f2829c4998a"
+
+
+service_name:  "docker"

@@ -1,0 +1,105 @@
+---
+# tasks file for K8SMater
+  - name: Removing docker if installed
+    yum:
+       name:
+        - docker-client
+        - docker-client-latest
+        - docker-common
+        - docker-latest
+        - docker-latest-logrotate
+        - docker-logrotate
+        - docker-engine
+       state: removed
+
+  - name: Installing docker
+    package:
+      name: "docker"
+      state: present
+
+  - name: Starting docker service
+    service:
+      name: "docker"
+      state: started
+      enabled: yes
+
+  - name: Adding Yum repository for Kubernetes
+    yum_repository:
+       baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+       name: KUBERNETES
+       state: present
+       gpgcheck: 1
+       repo_gpgcheck: 1
+       description: Kubernetes
+       gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+       enabled: 1
+
+  - name: Install Kublet, Kubeadm, Kubectl
+    package:
+       name: "{{ item }}"
+       state: present
+       update_cache: yes
+
+    loop: "{{packages}}"
+
+  - name: copy daemon file
+    copy:
+       src: daemon.json
+       dest: /etc/docker/daemon.json
+
+  - name: Remove swapfile from /etc/fstab
+    mount:
+       name: "{{ item }}"
+       fstype: swap
+       state: absent
+    loop:
+       - swap
+       - none
+
+
+  - name: Restarting Docker service
+    service:
+       name: "{{ service_name }}"
+       state: restarted
+       enabled: yes
+    become: yes
+    notify: Restarting Docker Service
+
+  - name: Install iproute-tc
+    package:
+       name: iproute-tc
+       state: present
+       update_cache: yes
+
+  - name: Starting Kubelet
+    service:
+       name: kubelet
+       daemon_reload: yes
+       state: started
+       enabled: yes
+
+
+  - name: Initialize the Kubernetes cluster using kubeadm
+    shell: "kubeadm init --pod-network-cidr=10.240.0.0/16 --ignore-preflight-errors=NumCPU --ignore-preflight-errors=Mem"
+    ignore_errors: yes
+
+  - name: Making master as Client
+    shell: "{{ item }}"
+    loop:
+    - "mkdir -p $HOME/.kube"
+    - "cp -i /etc/kubernetes/admin.conf $HOME/.kube/config"
+    - "chown $(id -u):$(id -g) $HOME/.kube/config"
+    ignore_errors:  yes
+
+  - name: Install Flannel pod network
+    shell: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+    ignore_errors:  yes
+
+  - name: Generating Join command
+    command: kubeadm token create --print-join-command
+    register: join_command
+
+  - name: Printing token
+    debug:
+      var: join_command.stdout_lines[0]
+

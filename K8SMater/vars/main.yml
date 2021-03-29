@@ -1,0 +1,8 @@
+---
+# vars file for K8SMater
+packages:
+        - kubelet
+        - kubeadm
+        - kubectl
+
+service_name:  "docker"
